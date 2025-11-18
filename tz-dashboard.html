@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Time Converter</title>
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent: #0071e3;
+            --input-bg: #f2f2f2;
+            --input-focus-bg: #ffffff;
+            --slider-track-start: #dcecfb;
+            --slider-track-end: #ffffff;
+            --slider-border: #e5e5e5;
+            --marker-color: #eee;
+            --marker-major-color: #ccc;
+            --thumb-shadow: rgba(0,0,0,0.2);
+            --btn-hover-bg: #e5e5e5;
+            --live-indicator: #34c759; /* Green dot for live mode */
+        }
+
+        /* Dark Theme Overrides */
+        body.dark-theme {
+            --bg-color: #000000;
+            --card-bg: #1c1c1e;
+            --text-primary: #ffffff;
+            --text-secondary: #98989d;
+            --accent: #0a84ff;
+            --input-bg: #2c2c2e;
+            --input-focus-bg: #3a3a3c;
+            --slider-track-start: #2c2c2e;
+            --slider-track-end: #48484a;
+            --slider-border: #3a3a3c;
+            --marker-color: #3a3a3c;
+            --marker-major-color: #636366;
+            --thumb-shadow: rgba(0,0,0,0.5);
+            --btn-hover-bg: #3a3a3c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Header & Controls */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 { font-size: 24px; margin: 0; }
+
+        /* Pulsing Live Dot */
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--live-indicator);
+            border-radius: 50%;
+            display: none; /* Hidden by default, shown via JS */
+            animation: pulse 2s infinite;
+        }
+
+        .live-dot.active { display: block; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(52, 199, 89, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+        }
+
+        .controls-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--slider-border);
+            font-size: 14px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button.add-btn {
+            background: var(--accent);
+            color: white;
+            padding: 8px 16px;
+        }
+        button.add-btn:hover { opacity: 0.9; }
+
+        button.icon-btn {
+            background: var(--input-bg);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+        }
+        button.icon-btn:hover { background: var(--btn-hover-bg); }
+
+        /* Timezone Card */
+        .clock-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .city-info h2 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .city-info p {
+            margin: 4px 0 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .time-display {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .digital-time-input {
+            font-size: 32px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+            background: var(--input-bg);
+            padding: 4px 12px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            width: 110px;
+            text-align: center;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .digital-time-input:focus {
+            background: var(--input-focus-bg);
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .date-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            left: -30px;
+            background: #ff3b30;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .clock-card:hover .remove-btn { display: flex; }
+
+        /* Slider Styling */
+        .slider-container {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .ticks {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            pointer-events: none;
+            padding: 0 10px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            z-index: 2;
+            margin: 0;
+        }
+        input[type=range]:focus { outline: none; }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 24px;
+            cursor: pointer;
+            background: linear-gradient(90deg, var(--slider-track-start) 0%, var(--slider-track-end) 50%, var(--slider-track-start) 100%);
+            border-radius: 6px;
+            border: 1px solid var(--slider-border);
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            height: 32px;
+            width: 14px;
+            border-radius: 4px;
+            background: var(--card-bg);
+            border: 1px solid var(--slider-border);
+            box-shadow: 0 2px 4px var(--thumb-shadow);
+            cursor: grab;
+            -webkit-appearance: none;
+            margin-top: -5px;
+        }
+
+        .tick-markers {
+            position: absolute;
+            width: 100%; height: 24px;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-sizing: border-box;
+        }
+
+        .marker { width: 1px; height: 100%; background-color: var(--marker-color); }
+        .marker.major { background-color: var(--marker-major-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <div class="title-wrapper">
+                <h1>World Clock</h1>
+                <div class="live-dot active" id="live-indicator" title="Live Time"></div>
+            </div>
+            <div class="controls-wrapper">
+                <button class="icon-btn" onclick="resetToNow()" title="Reset to Current Time">↻</button>
+                <button class="icon-btn" onclick="toggleTheme()" title="Toggle Dark Mode">🌙</button>
+
+                <select id="timezone-select"></select>
+                <button class="add-btn" onclick="addLocation()">Add</button>
+            </div>
+        </div>
+
+        <div id="clocks-list"></div>
+    </div>
+
+    <script>
+        let globalTimestamp = Date.now();
+        let isDark = false;
+        let isLive = true;
+
+        let activeLocations = [
+            { id: 1, city: 'Toronto', country: 'Canada', zone: 'America/Toronto' },
+            { id: 2, city: 'UTC', country: 'Universal Time', zone: 'UTC' },
+            { id: 3, city: 'Amsterdam', country: 'Netherlands', zone: 'Europe/Amsterdam' }
+        ];
+
+        const availableZones = [
+            { city: 'New York', country: 'USA', zone: 'America/New_York' },
+            { city: 'Los Angeles', country: 'USA', zone: 'America/Los_Angeles' },
+            { city: 'London', country: 'UK', zone: 'Europe/London' },
+            { city: 'Paris', country: 'France', zone: 'Europe/Paris' },
+            { city: 'Tokyo', country: 'Japan', zone: 'Asia/Tokyo' },
+            { city: 'Sydney', country: 'Australia', zone: 'Australia/Sydney' },
+            { city: 'Dubai', country: 'UAE', zone: 'Asia/Dubai' },
+            { city: 'Kolkata', country: 'India', zone: 'Asia/Kolkata' },
+            { city: 'Hong Kong', country: 'China', zone: 'Asia/Hong_Kong' }
+        ];
+
+        function init() {
+            const select = document.getElementById('timezone-select');
+            availableZones.forEach((loc, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.text = `${loc.city} (${loc.country})`;
+                select.appendChild(option);
+            });
+            renderClocks();
+
+            setInterval(() => {
+                if (isLive) {
+                    globalTimestamp = Date.now();
+                    updateUIValues();
+                }
+            }, 1000);
+        }
+
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('dark-theme');
+            const btns = document.querySelectorAll('.icon-btn');
+            btns[1].innerText = isDark ? '☀️' : '🌙';
+        }
+
+        function resetToNow() {
+            isLive = true;
+            document.getElementById('live-indicator').classList.add('active');
+            globalTimestamp = Date.now();
+            updateUIValues();
+        }
+
+        function pauseLiveMode() {
+            if (isLive) {
+                isLive = false;
+                document.getElementById('live-indicator').classList.remove('active');
+            }
+        }
+
+        function addLocation() {
+            const select = document.getElementById('timezone-select');
+            const selected = availableZones[select.value];
+            activeLocations.push({ ...selected, id: Date.now() });
+            renderClocks();
+        }
+
+        function removeLocation(id) {
+            activeLocations = activeLocations.filter(loc => loc.id !== id);
+            renderClocks();
+        }
+
+        function getTimeDetails(timestamp, zone) {
+            const date = new Date(timestamp);
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: zone,
+                hour: 'numeric', minute: 'numeric',
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour12: false
+            });
+
+            const parts = formatter.formatToParts(date);
+            const getPart = (type) => parts.find(p => p.type === type).value;
+
+            let hour = parseInt(getPart('hour'));
+            if (hour === 24) hour = 0;
+
+            const minute = parseInt(getPart('minute'));
+            const totalMinutes = (hour * 60) + minute;
+
+            return {
+                hourStr: hour.toString().padStart(2, '0'),
+                minuteStr: minute.toString().padStart(2, '0'),
+                dateStr: `${getPart('weekday')}, ${getPart('month')} ${getPart('day')}`,
+                totalMinutes: totalMinutes
+            };
+        }
+
+        function handleSlide(event, zone) {
+            pauseLiveMode();
+            const sliderValue = parseInt(event.target.value);
+            applyTimeChange(sliderValue, zone);
+        }
+
+        function handleTextInput(element, zone) {
+            pauseLiveMode();
+            const inputStr = element.value;
+            const regex = /^(\d{1,2})[:\s.]?(\d{2})$/;
+            const match = inputStr.match(regex);
+
+            if (match) {
+                let h = parseInt(match[1]);
+                let m = parseInt(match[2]);
+
+                if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+                    const newTotalMinutes = (h * 60) + m;
+                    applyTimeChange(newTotalMinutes, zone);
+                    element.blur();
+                    return;
+                }
+            }
+            updateUIValues();
+        }
+
+        function applyTimeChange(newTotalMinutes, zone) {
+            const currentDetails = getTimeDetails(globalTimestamp, zone);
+            const currentMinutes = currentDetails.totalMinutes;
+            let diffMinutes = newTotalMinutes - currentMinutes;
+
+            globalTimestamp += diffMinutes * 60 * 1000;
+            updateUIValues();
+        }
+
+        function renderClocks() {
+            const container = document.getElementById('clocks-list');
+            container.innerHTML = '';
+
+            activeLocations.forEach(loc => {
+                const details = getTimeDetails(globalTimestamp, loc.zone);
+
+                const card = document.createElement('div');
+                card.className = 'clock-card';
+                card.innerHTML = `
+                    <button class="remove-btn" onclick="removeLocation(${loc.id})">&times;</button>
+                    <div class="card-header">
+                        <div class="city-info">
+                            <h2>${loc.city}</h2>
+                            <p>${loc.country}</p>
+                        </div>
+                        <div class="time-display">
+                            <input type="text"
+                                   class="digital-time-input"
+                                   id="time-${loc.id}"
+                                   value="${details.hourStr}:${details.minuteStr}"
+                                   onchange="handleTextInput(this, '${loc.zone}')"
+                                   autocomplete="off">
+
+                            <div class="date-info" id="date-${loc.id}">
+                                ${details.dateStr}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slider-container">
+                        <div class="ticks">
+                            <span>0</span><span>6</span><span>12</span><span>18</span><span>24</span>
+                        </div>
+                         <div class="tick-markers">
+                            <div class="marker major"></div><div class="marker"></div>
+                            <div class="marker major"></div><div class="marker"></div>
+                            <div class="marker major"></div><div class="marker"></div>
+                            <div class="marker major"></div><div class="marker"></div>
+                            <div class="marker major"></div>
+                        </div>
+                        <input type="range" min="0" max="1439" value="${details.totalMinutes}"
+                            oninput="handleSlide(event, '${loc.zone}')"
+                            id="slider-${loc.id}">
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateUIValues() {
+            activeLocations.forEach(loc => {
+                const details = getTimeDetails(globalTimestamp, loc.zone);
+
+                const inputEl = document.getElementById(`time-${loc.id}`);
+                if (document.activeElement !== inputEl) {
+                    inputEl.value = `${details.hourStr}:${details.minuteStr}`;
+                }
+
+                document.getElementById(`date-${loc.id}`).innerText = details.dateStr;
+
+                const slider = document.getElementById(`slider-${loc.id}`);
+                if (document.activeElement !== slider) {
+                    slider.value = details.totalMinutes;
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
